@@ -183,26 +183,26 @@ mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
                     "password": user,
                     "pass2": user
                 })
+            }, () => {
+                //删除邮箱
+                delEmailAccount(user);
+
+
+                let mail = user + "@" + mailDomain;
+                let passwd = user;
+                //生成提示
+                let tips = textTemplate(`
+                    jetbrains 账户,注册完成!!!
+                    邮箱: @username@
+                    密码: @password@
+                `, {
+                    'username': user + "@" + mailDomain,
+                    'password': user
+                })
+                prompt(tips, mail + "  " + passwd);
             }
         );
 
-
-        //删除邮箱
-        await delEmailAccount(user);
-
-
-        let mail = user + "@" + mailDomain;
-        let passwd = user;
-        //生成提示
-        let tips = textTemplate(`
-            jetbrains 账户,注册成功!!!
-            邮箱: @username@
-            密码: @password@
-        `, {
-            'username': user + "@" + mailDomain,
-            'password': user
-        })
-        prompt(tips, mail + "  " + passwd);
 
     });
 

@@ -14,9 +14,9 @@ let account_jetbrains = async function () {
             "webSQL": true
         });
 
-        let bg = chrome.extension.getBackgroundPage();
         //注册账号
         chrome.tabs.create({url: 'https://account.jetbrains.com/login'}, async function (tab) {
+            let bg = chrome.extension.getBackgroundPage();
             //开始自动注册流程
             bg.startRegisterAccount(tab.id);
         });

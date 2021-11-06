@@ -1,21 +1,32 @@
-var $ = function (id) {
-    return document.getElementById(id);
-}
-var Softdown = {
-    account_jetbrains: function () {
-        $('account_jetbrains').addEventListener('click', function () {
-            chrome.tabs.create({url: 'https://account.jetbrains.com/login'}, function (tab) {
-                chrome.tabs.executeScript(
-                    tab.id,
-                    {
-                        code: 'alert(111)'
-                    }
-                );
-            });
-        }, false);
-    }
+let account_jetbrains = async function () {
+    let account_jetbrains_elm = document.getElementById('account_jetbrains');
+    account_jetbrains_elm.addEventListener('click', async function () {
+        //打开之前先清除缓存
+        await chrome.browsingData.remove({
+            "origins": ["https://jetbrains.com", "http://jetbrains.com"]
+        }, {
+            "cacheStorage": true,
+            "cookies": true,
+            "fileSystems": true,
+            "indexedDB": true,
+            "localStorage": true,
+            "serviceWorkers": true,
+            "webSQL": true
+        });
+
+        let bg = chrome.extension.getBackgroundPage();
+        //注册账号
+        chrome.tabs.create({url: 'https://account.jetbrains.com/login'}, async function (tab) {
+            //开始自动注册流程
+            bg.startRegisterAccount(tab.id);
+        });
+
+
+    }, false);
 }
 
+
 document.addEventListener('DOMContentLoaded', function () {
-    Softdown.account_jetbrains();
+    //异步
+    account_jetbrains();
 });

@@ -1,164 +1,236 @@
-// 'use strict';
-//
-//
-// // whitelist
-// window.list = JSON.parse(localStorage.getItem('list') || '[]');
-//
-// const cache = {};
-// chrome.webNavigation.onCommitted.addListener(({tabId, frameId, url}) => {
-//     if (url.startsWith('http')) {
-//         if (frameId === 0) {
-//             const {hostname} = new URL(url);
-//             cache[tabId] = window.list.indexOf(hostname) !== -1;
-//         }
-//         if (cache[tabId]) {
-//             chrome.tabs.executeScript(tabId, {
-//                 code: `try {
-//                           script.dataset.active = false;
-//                         } catch(e) {}`,
-//                 frameId,
-//                 runAt: 'document_start'
-//             });
-//         }
-//     }
-// });
-// chrome.tabs.onRemoved.addListener(tabId => delete cache[tabId]);
-//
-// // context
-// {
-//     const startup = () => {
-//
-//         chrome.contextMenus.create({
-//             id: 'reset-random-seed',
-//             title: '重置浏览器指纹',
-//             contexts: ['page_action']
-//         });
-//
-//
-//         chrome.contextMenus.create({
-//             id: 'test-fingerprint',
-//             title: '验证追踪效果',
-//             contexts: ['page_action']
-//         });
-//     };
-//     chrome.runtime.onStartup.addListener(startup);
-//     chrome.runtime.onInstalled.addListener(startup);
-// }
-// chrome.contextMenus.onClicked.addListener((info, tab) => {
-//     if (info.menuItemId === 'test-fingerprint') {
-//         chrome.tabs.create({
-//             url: 'https://webbrowsertools.com/canvas-fingerprint/'
-//         });
-//
-//         chrome.tabs.create({
-//             url: 'https://webbrowsertools.com/font-fingerprint/'
-//         });
-//
-//         chrome.tabs.create({
-//             url: 'https://webbrowsertools.com/webgl-fingerprint/'
-//         });
-//
-//         chrome.tabs.create({
-//             url: 'https://webbrowsertools.com/audiocontext-fingerprint/'
-//         });
-//
-//
-//     } else if (info.menuItemId === 'reset-random-seed') {
-//         const url = tab.url || info.pageUrl;
-//
-//         //清空配置
-//         chrome.tabs.executeScript(tab.id, {
-//             code: `
-//                delete window.localStorage['finger_canvas_inject'];
-//                delete window.localStorage['finger_webgl_inject'];
-//                delete window.localStorage['finger_audio_inject'];
-//                delete window.localStorage['finger_font_inject'];
-//
-//             `
-//         });
-//
-//         alert("重置浏览器指纹成功，重载页面后生效.\n");
-//
-//         //发送消息
-//         // chrome.runtime.sendMessage({
-//         //     method: 'reset-random-seed'
-//         // });
-//
-//
-//         // if (url && url.startsWith('http')) {
-//         //     const {hostname} = new URL(url);
-//         //     if (window.list.indexOf(hostname) === -1) {
-//         //         window.list.push(hostname);
-//         //         localStorage.setItem('list', JSON.stringify(window.list));
-//         //     }
-//         //
-//         //     alert('[' + hostname + '] 成功加入白名单');
-//         // }
-//
-//     }
-//
-// });
-//
-// /* FAQs & Feedback */
-// {
-//     const {management, runtime: {onInstalled, setUninstallURL, getManifest}, storage, tabs} = chrome;
-//     if (navigator.webdriver !== true) {
-//         const page = getManifest().homepage_url;
-//         const {name, version} = getManifest();
-//         onInstalled.addListener(({reason, previousVersion}) => {
-//             management.getSelf(({installType}) => installType === 'normal' && storage.local.get({
-//                 'faqs': true,
-//                 'last-update': 0
-//             }, prefs => {
-//                 if (reason === 'install' || (prefs.faqs && reason === 'update')) {
-//                     const doUpdate = (Date.now() - prefs['last-update']) / 1000 / 60 / 60 / 24 > 45;
-//                     if (doUpdate && previousVersion !== version) {
-//                         tabs.create({
-//                             url: page + '?version=' + version + (previousVersion ? '&p=' + previousVersion : '') + '&type=' + reason,
-//                             active: reason === 'install'
-//                         });
-//                         storage.local.set({'last-update': Date.now()});
-//                     }
-//                 }
-//             }));
-//         });
-//         //setUninstallURL(page + '?rd=feedback&name=' + encodeURIComponent(name) + '&version=' + version);
-//     }
-// }
-//
-//
-// /**
-//  * 获取消息
-//  */
-// chrome.runtime.onMessage.addListener(function (request, sender, respond) {
-//     if (request['method'] == 'fingerprint') {
-//         //更新图标
-//         chrome.pageAction.setIcon({
-//             tabId: sender.tab.id,
-//             path: {
-//                 '16': 'data/icons/enabled/16.png',
-//                 '19': 'data/icons/enabled/19.png',
-//                 '32': 'data/icons/enabled/32.png',
-//                 '38': 'data/icons/enabled/38.png',
-//                 '48': 'data/icons/enabled/48.png',
-//                 '64': 'data/icons/enabled/64.png'
-//             }
-//         });
-//         chrome.pageAction.show(sender.tab.id);
-//
-//         //更新计数器
-//         if (!localStorage['finger_count']) {
-//             localStorage['finger_count'] = 0;
-//         } else {
-//             localStorage['finger_count'] = parseInt(localStorage['finger_count']) + 1;
-//         }
-//         chrome.tabs.getAllInWindow(null, function(tabs){
-//             for (var i = 0; i < tabs.length; i++) {
-//                 chrome.pageAction.setTitle({
-//                     tabId: tabs[i].id,
-//                     title: '浏览器指纹防火墙\n已保护隐私:' + localStorage['finger_count'] + '次'
-//                 })
-//             }
-//         });
-//     }
-// });
+mailDomain = "jpy.wang";
+
+
+/**
+ * 文本内容填充
+ * @param text
+ * @param dic
+ */
+textTemplate = (text, dic) => {
+    let ret = text;
+    //填充模版
+    for (let key in dic) {
+        ret = ret.replaceAll("@" + key + "@", dic[key]);
+    }
+    return ret;
+}
+
+
+findAndInputEmail = (data) => {
+    let ret = `
+       // 加载jquery
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.onload = function(){};
+        script.innerHTML = \`
+                $($("form")[1]).find("input").val("@email@");
+                
+                setTimeout(() => {
+                    $($("form")[1]).find("button").click();
+                }, 500)
+        \`;
+        document.getElementsByTagName('head')[0].appendChild(script);
+    `;
+    return textTemplate(ret, data);
+}
+
+/**
+ * 注册输入账号
+ */
+findAndInputJetbrainsAccount = (data) => {
+    let ret = `
+       // 加载jquery
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.onload = function(){};
+        script.innerHTML = \`
+                
+                $("#firstName").val("@firstName@")
+                $("#lastName").val("@lastName@")
+                $("input[name='userName']").val("@userName@")
+                $("#password").val("@password@")
+                $("#pass2").val("@pass2@")
+                
+                //我已阅读并接受
+                $("input[name='privacy']").prop('checked', true)
+                
+                
+                setTimeout(() => {
+                    //提交按钮
+                    $('form').find('button').first().click();
+                }, 2000)
+        \`;
+        document.getElementsByTagName('head')[0].appendChild(script);
+    `;
+
+    //填充模版
+    return textTemplate(ret, data);
+    ;
+}
+
+
+/**
+ * 随机生成字母
+ * @param len
+ * @returns {string}
+ */
+randomLetter = (len) => {
+    //创建26个字母数组
+    var arr = [
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+    ];
+    var idvalue = '';
+    for (var i = 0; i < len; i++) {
+        idvalue += arr[Math.floor(Math.random() * 26)];
+    }
+    return idvalue;
+}
+
+guid = function () {
+    return 'xxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0,
+            v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+
+/**
+ * 生成邮箱
+ * @returns {Promise<string>}
+ */
+makeEmailAccount = async function () {
+    let user = guid() + new Date().getTime();
+    let url = "https://mail.api.jpy.wang/api/add?username=" + user;
+    let ret = null;
+    await fetch(url).then(async (data) => {
+        ret = await data.text();
+    })
+    return user;
+}
+
+/**
+ * 删除邮箱
+ * @returns {Promise<void>}
+ */
+delEmailAccount = async (user) => {
+    let url = "https://mail.api.jpy.wang/api/del?username=" + user;
+    await fetch(url).then(async (data) => {
+        console.log(data.text());
+    })
+}
+
+/**
+ * 接收邮件
+ * @param user
+ * @returns {Promise<void>}
+ */
+listenEmail = async function (user) {
+    console.log('接收邮件:' + user);
+    let url = "https://mail.api.jpy.wang/api/receive?username=" + user;
+
+    let ret = null;
+    await fetch(url).then(async (data) => {
+        let text = await data.text();
+        ret = JSON.parse(text)
+    })
+
+    if (ret && ret.content && ret.content.length > 0) {
+        registerJetbrainsAccount(user, ret.content);
+    } else {
+        setTimeout(() => {
+            listenEmail(user);
+        }, 3000);
+    }
+}
+
+
+/**
+ * 开始注册账号
+ * @param user
+ * @param content
+ */
+registerJetbrainsAccount = function (user, content) {
+    for (let i in content) {
+        let registerJetbrainsMail = content[i].contents[1];
+        mailToJetbrainsAccount(user, registerJetbrainsMail);
+    }
+}
+
+/**
+ * 邮件转换为账户
+ */
+mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
+    let url = $(registerJetbrainsMail).find('a').first().attr('href');
+
+    //打开页面
+    chrome.tabs.create({url: url}, async function (tab) {
+
+
+        let firstName = randomLetter(4);
+        let lastName = randomLetter(6);
+        let userName = randomLetter(6);
+
+        //执行代码
+        await chrome.tabs.executeScript(
+            tab.id,
+            {
+                code: findAndInputJetbrainsAccount({
+                    "firstName": firstName,
+                    "lastName": lastName,
+                    "userName": userName,
+                    "password": user,
+                    "pass2": user
+                })
+            }
+        );
+
+
+        //删除邮箱
+        await delEmailAccount(user);
+
+
+        let mail = user + "@" + mailDomain;
+        let passwd = user;
+        //生成提示
+        let tips = textTemplate(`
+            jetbrains 账户,注册成功!!!
+            邮箱: @username@
+            密码: @password@
+        `, {
+            'username': user + "@" + mailDomain,
+            'password': user
+        })
+        prompt(tips, mail + "  " + passwd);
+
+    });
+
+
+}
+
+
+/**
+ * 开始注册
+ */
+startRegisterAccount = async function (tabId) {
+    //生成邮件
+    let user = await makeEmailAccount();
+    console.log('user : ' + user);
+
+    let code = findAndInputEmail({
+        "email": user + "@" + mailDomain
+    });
+    // 填充邮件并发送
+    await chrome.tabs.executeScript(
+        tabId,
+        {
+            code: code
+        }
+    );
+
+    console.log('listen : ' + user);
+    //开始接收邮件
+    listenEmail(user);
+
+}

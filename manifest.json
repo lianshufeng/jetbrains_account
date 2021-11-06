@@ -2,7 +2,7 @@
   "update_url": "https://clients2.google.com/service/update2/crx",
   "manifest_version": 2,
   "version": "1.0.0",
-  "name": "Get Jetbrains Account ",
+  "name": "Get Jetbrains Account (2021-11-06)",
   "description": "",
   "icons": {
     "16": "data/icons/16.png",
@@ -20,6 +20,7 @@
     "storage",
     "webNavigation",
     "contextMenus",
+    "browsingData",
     "tabs"
   ],
   "homepage_url": "http://www.jpy.wang",
@@ -27,6 +28,7 @@
   "background": {
     "persistent": false,
     "scripts": [
+      "./js/jquery-3.6.0.min.js",
       "background.js"
     ]
   },

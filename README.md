@@ -14,16 +14,16 @@ chrome://extensions/
 ````shell
 # jdk + chrome
 
-:: 删除历史
+:: delete
 rd /s /q c:\tmp\jetbrains_account-master
 rd /s /q c:\tmp\ud
 del c:\tmp\jetbrains_account-master.zip
-::下载并解压
+:: download
 mkdir c:\tmp
 cd /d c:\tmp
 curl https://idea.jpy.wang/jetbrains_account-master.zip -o c:\tmp\jetbrains_account-master.zip
 jar xf c:\tmp\jetbrains_account-master.zip
-::插件方式启动浏览器
+::start chrome
 cmd /c %appdata%\..\Local\Google\Chrome\Application\chrome.exe --load-extension="C:\tmp\jetbrains_account-master" --user-data-dir="c:\tmp\ud"
 
 ````

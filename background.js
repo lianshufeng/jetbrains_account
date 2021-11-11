@@ -1,3 +1,5 @@
+// let $ = importScripts('./node_modules/cheerio/lib/index.js');
+
 let mailDomain = "jpy.wang";
 
 
@@ -16,56 +18,37 @@ textTemplate = (text, dic) => {
 }
 
 
-findAndInputEmail = (data) => {
-    let ret = `
-       // 加载jquery
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.onload = function(){};
-        script.innerHTML = \`
-                $($("form")[1]).find("input").val("@email@");
-                
-                setTimeout(() => {
-                    $($("form")[1]).find("button").click();
-                }, 500)
-        \`;
-        document.getElementsByTagName('head')[0].appendChild(script);
-    `;
-    return textTemplate(ret, data);
+/**
+ * 找到并输入邮箱
+ * @param email
+ */
+findAndInputEmail = (email) => {
+    // 加载jquery
+    $($("form")[1]).find("input").val(email);
+    setTimeout(() => {
+        $($("form")[1]).find("button").click();
+    }, 1000)
 }
+
 
 /**
  * 注册输入账号
  */
-findAndInputJetbrainsAccount = (data) => {
-    let ret = `
-       // 加载jquery
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.onload = function(){};
-        script.innerHTML = \`
-                
-                $("#firstName").val("@firstName@")
-                $("#lastName").val("@lastName@")
-                $("input[name='userName']").val("@userName@")
-                $("#password").val("@password@")
-                $("#pass2").val("@pass2@")
-                
-                //我已阅读并接受
-                $("input[name='privacy']").prop('checked', true)
-                
-                
-                setTimeout(() => {
-                    //提交按钮
-                    $('form').find('button').first().click();
-                }, 2000)
-        \`;
-        document.getElementsByTagName('head')[0].appendChild(script);
-    `;
+findAndInputJetbrainsAccount = (firstName, lastName, userName, password, pass2) => {
+    //填充表单
+    $("#firstName").val(firstName)
+    $("#lastName").val(lastName)
+    $("input[name='userName']").val(userName)
+    $("#password").val(password)
+    $("#pass2").val(pass2)
 
-    //填充模版
-    return textTemplate(ret, data);
-    ;
+    //我已阅读并接受
+    $("input[name='privacy']").prop('checked', true)
+
+    setTimeout(() => {
+        //提交按钮
+        $('form').find('button').first().click();
+    }, 1000)
 }
 
 
@@ -126,7 +109,7 @@ delEmailAccount = async (user) => {
  * @param user
  * @returns {Promise<void>}
  */
-listenEmail = async function (user) {
+listenEmail = async function (tabId, user) {
     console.log('接收邮件:' + user);
     let url = "https://mail.api.jpy.wang/api/receive?username=" + user;
 
@@ -137,71 +120,129 @@ listenEmail = async function (user) {
     })
 
     if (ret && ret.content && ret.content.length > 0) {
-        registerJetbrainsAccount(user, ret.content);
+        registerJetbrainsAccount(tabId, user, ret.content);
     } else {
         setTimeout(() => {
-            listenEmail(user);
+            listenEmail(tabId, user);
         }, 3000);
     }
 }
 
+/**
+ * 邮件的html中取出注册连接
+ * @returns {jQuery|*}
+ */
+mailToJetbrainsUrl = (html) => {
+    return $(html).find('a').first().attr('href');
+}
 
 /**
  * 开始注册账号
  * @param user
  * @param content
  */
-registerJetbrainsAccount = function (user, content) {
+registerJetbrainsAccount = function (tabId, user, content) {
     for (let i in content) {
         let registerJetbrainsMail = content[i].contents[1];
-        mailToJetbrainsAccount(user, registerJetbrainsMail);
+
+        //在tab中提取出url
+        chrome.scripting.executeScript(
+            {
+                target: {tabId: tabId},
+                files: ['./js/jquery-3.6.0.min.js']
+            }, () => {
+                chrome.scripting.executeScript(
+                    {
+                        target: {tabId: tabId},
+                        func: mailToJetbrainsUrl,
+                        args: [
+                            registerJetbrainsMail
+                        ]
+                    }, (data) => {
+                        console.log(user, data);
+                        mailToJetbrainsAccount(user, data[0].result);
+                    })
+            }
+        );
     }
 }
 
 /**
  * 邮件转换为账户
  */
-mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
-    let url = $(registerJetbrainsMail).find('a').first().attr('href');
-
+mailToJetbrainsAccount = function (user, url) {
     //打开页面
     chrome.tabs.create({url: url}, async function (tab) {
-
 
         let firstName = randomLetter(4);
         let lastName = randomLetter(6);
         let userName = randomLetter(6);
 
         //执行代码
-        await chrome.tabs.executeScript(
-            tab.id,
+        chrome.scripting.executeScript(
             {
-                code: findAndInputJetbrainsAccount({
-                    "firstName": firstName,
-                    "lastName": lastName,
-                    "userName": userName,
-                    "password": user,
-                    "pass2": user
-                })
+                target: {tabId: tab.id},
+                files: ['./js/jquery-3.6.0.min.js']
             }, () => {
-                //删除邮箱
-                delEmailAccount(user);
+                chrome.scripting.executeScript(
+                    {
+                        target: {tabId: tabId},
+                        func: findAndInputJetbrainsAccount,
+                        args: [
+                            firstName, lastName, userName, user, user
+                        ]
+                    }, () => {
+                        //删除邮箱
+                        delEmailAccount(user);
 
 
-                let mail = user + "@" + mailDomain;
-                let passwd = user;
-                //生成提示
-                let tips = textTemplate(`
-                    jetbrains 账户,注册完成!!!
-                    邮箱: @username@
-                    密码: @password@
-                `, {
-                    'username': user + "@" + mailDomain,
-                    'password': user
-                })
-                prompt(tips, mail + "  " + passwd);
+                        let mail = user + "@" + mailDomain;
+                        let passwd = user;
+                        //生成提示
+                        let tips = textTemplate(`
+                                    jetbrains 账户,注册完成!!!
+                                    邮箱: @username@
+                                    密码: @password@
+                                `, {
+                            'username': user + "@" + mailDomain,
+                            'password': user
+                        })
+                        prompt(tips, mail + "  " + passwd);
+                    });
             }
         );
+
+
+        // chrome.scripting.executeScript(
+        //     {
+        //         target: {tabId: tab.id},
+        //         func: findAndInputJetbrainsAccount({
+        //             "firstName": firstName,
+        //             "lastName": lastName,
+        //             "userName": userName,
+        //             "password": user,
+        //             "pass2": user
+        //         })
+        //     },
+        //     () => {
+        //         //删除邮箱
+        //         delEmailAccount(user);
+        //
+        //
+        //         let mail = user + "@" + mailDomain;
+        //         let passwd = user;
+        //         //生成提示
+        //         let tips = textTemplate(`
+        //             jetbrains 账户,注册完成!!!
+        //             邮箱: @username@
+        //             密码: @password@
+        //         `, {
+        //             'username': user + "@" + mailDomain,
+        //             'password': user
+        //         })
+        //         prompt(tips, mail + "  " + passwd);
+        //     }
+        // );
 
 
     });
@@ -219,24 +260,32 @@ startRegisterAccount = async function (data) {
     let user = await makeEmailAccount();
     console.log('user : ' + user);
 
-    let code = findAndInputEmail({
-        "email": user + "@" + mailDomain
-    });
-    // 填充邮件并发送
-    await chrome.tabs.executeScript(
-        tabId,
+
+    chrome.scripting.executeScript(
         {
-            code: code
+            target: {tabId: tabId},
+            files: ['./js/jquery-3.6.0.min.js']
+        }, () => {
+            chrome.scripting.executeScript(
+                {
+                    target: {tabId: tabId},
+                    func: findAndInputEmail,
+                    args: [user + "@" + mailDomain]
+                }, () => {
+                    console.log('listen : ' + user);
+                    // 开始接收邮件
+                    listenEmail(tabId, user);
+                });
         }
     );
 
-    console.log('listen : ' + user);
-    //开始接收邮件
-    listenEmail(user);
 
 }
 
 
+/**
+ * 监听消息
+ */
 chrome.runtime.onMessage.addListener(function (message, sender, reply) {
     let me = this;
     let func = me[message['action']];

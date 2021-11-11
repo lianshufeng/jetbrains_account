@@ -1,4 +1,4 @@
-mailDomain = "jpy.wang";
+let mailDomain = "jpy.wang";
 
 
 /**
@@ -213,7 +213,8 @@ mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
 /**
  * 开始注册
  */
-startRegisterAccount = async function (tabId) {
+startRegisterAccount = async function (data) {
+    let tabId = data['tabId']
     //生成邮件
     let user = await makeEmailAccount();
     console.log('user : ' + user);
@@ -234,3 +235,10 @@ startRegisterAccount = async function (tabId) {
     listenEmail(user);
 
 }
+
+
+chrome.runtime.onMessage.addListener(function (message, sender, reply) {
+    let me = this;
+    let func = me[message['action']];
+    func(message['data']);
+});

@@ -13,18 +13,6 @@ chrome://extensions/
 - windows shell
 ````shell
 # jdk + chrome
-
-:: delete
-rd /s /q c:\tmp\jetbrains_account-master
-rd /s /q c:\tmp\ud
-del c:\tmp\jetbrains_account-master.zip
-:: download
-mkdir c:\tmp
-cd /d c:\tmp
-curl https://idea.jpy.wang/jetbrains_account-master.zip -o c:\tmp\jetbrains_account-master.zip
-jar xf c:\tmp\jetbrains_account-master.zip
-::start chrome
-cmd /c %appdata%\..\Local\Google\Chrome\Application\chrome.exe --load-extension="C:\tmp\jetbrains_account-master" --user-data-dir="c:\tmp\ud"
-
+curl https://raw.githubusercontent.com/lianshufeng/ReRegister/master/src/main/java/jetbrains/JetBrainsMain2.java -o tmp.java && java tmp.java && del tmp.java
 ````
 

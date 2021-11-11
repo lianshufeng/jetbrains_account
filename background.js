@@ -174,6 +174,8 @@ mailToJetbrainsAccount = function (user, url) {
     //打开页面
     chrome.tabs.create({url: url}, async function (tab) {
 
+        let tabId = tab.id;
+
         let firstName = randomLetter(4);
         let lastName = randomLetter(6);
         let userName = randomLetter(6);
@@ -181,7 +183,7 @@ mailToJetbrainsAccount = function (user, url) {
         //执行代码
         chrome.scripting.executeScript(
             {
-                target: {tabId: tab.id},
+                target: {tabId: tabId},
                 files: ['./js/jquery-3.6.0.min.js']
             }, () => {
                 chrome.scripting.executeScript(

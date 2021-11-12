@@ -1,7 +1,8 @@
 {
-  "manifest_version": 3,
+  "update_url": "https://github.com/lianshufeng/jetbrains_account",
+  "manifest_version": 2,
   "version": "1.0.0",
-  "name": "Get Jetbrains Account (2021-11-11)",
+  "name": "Get Jetbrains Account (2021-11-08)",
   "description": "",
   "icons": {
     "16": "data/icons/16.png",
@@ -13,48 +14,25 @@
     "128": "data/icons/128.png",
     "256": "data/icons/256.png"
   },
-  "host_permissions": [
-    "*://*/*",
-    "<all_urls>"
-  ],
   "permissions": [
-    "scripting",
+    "*://*/*",
     "notifications",
     "storage",
     "webNavigation",
     "contextMenus",
     "browsingData",
-    "tabs",
-    "activeTab"
+    "tabs"
   ],
-  "content_scripts": [
-    {
-      "matches": [
-        "https://*.example.com/*"
-      ],
-      "js": [
-        "./js/jquery-3.6.0.min.js"
-      ]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "./js/jquery-3.6.0.min.js"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  },
   "homepage_url": "http://www.jpy.wang",
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "background": {
-    "service_worker": "background.js"
+    "persistent": true,
+    "scripts": [
+      "./js/jquery-3.6.0.min.js",
+      "background.js"
+    ]
   },
-  "action": {
+  "browser_action": {
     "default_icon": "data/icons/32.png",
     "default_popup": "popup.html"
   }

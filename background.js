@@ -27,7 +27,7 @@ findAndInputEmail = (data) => {
                 
                 setTimeout(() => {
                     $($("form")[1]).find("button").click();
-                }, 500)
+                }, 1000)
         \`;
         document.getElementsByTagName('head')[0].appendChild(script);
     `;
@@ -58,7 +58,7 @@ findAndInputJetbrainsAccount = (data) => {
                 setTimeout(() => {
                     //提交按钮
                     $('form').find('button').first().click();
-                }, 2000)
+                }, 1000)
         \`;
         document.getElementsByTagName('head')[0].appendChild(script);
     `;

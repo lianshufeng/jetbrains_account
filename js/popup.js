@@ -16,15 +16,8 @@ let account_jetbrains = async function () {
 
         //注册账号
         chrome.tabs.create({url: 'https://account.jetbrains.com/login'}, async function (tab) {
-            // let bg = chrome.extension.getBackgroundPage();
-            // //开始自动注册流程
-            // bg.startRegisterAccount(tab.id);
-
-            chrome.runtime.sendMessage({"action": "startRegisterAccount", "data": {"tabId": tab.id}});
-
+            chrome.runtime.sendMessage({"action": "startRegisterAccountWork", "data": {"tabId": tab.id}});
         });
-
-
     }, false);
 }
 

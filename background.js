@@ -187,7 +187,6 @@ mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
                 //删除邮箱
                 delEmailAccount(user);
 
-
                 let mail = user + "@" + mailDomain;
                 let passwd = user;
                 //生成提示

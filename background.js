@@ -1,4 +1,32 @@
-mailDomain = "jpy.wang";
+const mailDomain = "jpy.wang";
+
+
+/**
+ * 入口
+ */
+const main = async () => {
+
+
+    await chrome.browsingData.remove({
+        "origins": ["https://jetbrains.com", "http://jetbrains.com"]
+    }, {
+        "cacheStorage": true,
+        "cookies": true,
+        "fileSystems": true,
+        "indexedDB": true,
+        "localStorage": true,
+        "serviceWorkers": true,
+        "webSQL": true
+    });
+
+
+    //注册账号
+    await chrome.tabs.create({url: 'https://account.jetbrains.com/login'}, async function (tab) {
+        console.log('开始注册流程');
+        await startRegisterAccount(tab.id);
+    });
+
+}
 
 
 /**
@@ -13,59 +41,6 @@ textTemplate = (text, dic) => {
         ret = ret.replaceAll("@" + key + "@", dic[key]);
     }
     return ret;
-}
-
-
-findAndInputEmail = (data) => {
-    let ret = `
-       // 加载jquery
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.onload = function(){};
-        script.innerHTML = \`
-                $($("form")[1]).find("input").val("@email@");
-                
-                setTimeout(() => {
-                    $($("form")[1]).find("button").click();
-                }, 1000)
-        \`;
-        document.getElementsByTagName('head')[0].appendChild(script);
-    `;
-    return textTemplate(ret, data);
-}
-
-/**
- * 注册输入账号
- */
-findAndInputJetbrainsAccount = (data) => {
-    let ret = `
-       // 加载jquery
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.onload = function(){};
-        script.innerHTML = \`
-                
-                $("#firstName").val("@firstName@")
-                $("#lastName").val("@lastName@")
-                $("input[name='userName']").val("@userName@")
-                $("#password").val("@password@")
-                $("#pass2").val("@pass2@")
-                
-                //我已阅读并接受
-                $("input[name='privacy']").prop('checked', true)
-                
-                
-                setTimeout(() => {
-                    //提交按钮
-                    $('form').find('button').first().click();
-                }, 1000)
-        \`;
-        document.getElementsByTagName('head')[0].appendChild(script);
-    `;
-
-    //填充模版
-    return textTemplate(ret, data);
-    ;
 }
 
 
@@ -153,8 +128,15 @@ listenEmail = async function (user) {
  */
 registerJetbrainsAccount = function (user, content) {
     for (let i in content) {
-        let registerJetbrainsMail = content[i].contents[1];
-        mailToJetbrainsAccount(user, registerJetbrainsMail);
+        let registerJetbrainsMail = content[i].contents[0];
+
+        //提取中括号之间的字符
+        const extractString = function (inputString) {
+            const matches = inputString.match(/\[(.*?)\]/);
+            return matches ? matches[1] : '未找到匹配的方括号';
+        }
+
+        mailToJetbrainsAccount(user, extractString(registerJetbrainsMail));
     }
 }
 
@@ -162,7 +144,8 @@ registerJetbrainsAccount = function (user, content) {
  * 邮件转换为账户
  */
 mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
-    let url = $(registerJetbrainsMail).find('a').first().attr('href');
+    const url = registerJetbrainsMail;
+    console.log(url)
 
     //打开页面
     chrome.tabs.create({url: url}, async function (tab) {
@@ -172,35 +155,58 @@ mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
         let lastName = randomLetter(6);
         let userName = randomLetter(6);
 
-        //执行代码
-        await chrome.tabs.executeScript(
-            tab.id,
-            {
-                code: findAndInputJetbrainsAccount({
-                    "firstName": firstName,
-                    "lastName": lastName,
-                    "userName": userName,
-                    "password": user,
-                    "pass2": user
-                })
-            }, () => {
-                //删除邮箱
-                delEmailAccount(user);
 
-                let mail = user + "@" + mailDomain;
-                let passwd = user;
-                //生成提示
-                let tips = textTemplate(`
+        //在内部页面执行
+        const findAndInputJetbrainsAccount_handle = function (firstName, lastName, userName, user) {
+
+            document.evaluate('//*[@id="firstName"]', document).iterateNext().value = firstName
+            document.evaluate('//*[@id="lastName"]', document).iterateNext().value = lastName
+            document.evaluate('//*[@id="userName"]', document).iterateNext().value = userName
+            document.evaluate('//*[@id="password"]', document).iterateNext().value = user
+            document.evaluate('//*[@id="pass2"]', document).iterateNext().value = user
+
+
+            //我已阅读并接受
+            document.evaluate('/html/body/div[2]/form/div[1]/div[1]/div/div[8]/div[2]/div/label/input', document).iterateNext().click()
+
+
+            setTimeout(() => {
+                //提交按钮
+                document.evaluate('/html/body/div[2]/form/div[3]/div/div/div[2]/button', document).iterateNext().click();
+            }, 1000)
+
+        }
+
+
+        await chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            function: findAndInputJetbrainsAccount_handle,
+            args: [firstName, lastName, userName, user]
+        });
+
+
+        //删除邮箱
+        delEmailAccount(user);
+
+        let mail = user + "@" + mailDomain;
+        let passwd = user;
+        //生成提示
+        let tips = textTemplate(`
                     jetbrains 账户,注册完成!!!
                     邮箱: @username@
                     密码: @password@
                 `, {
-                    'username': user + "@" + mailDomain,
-                    'password': user
-                })
-                prompt(tips, mail + "  " + passwd);
-            }
-        );
+            'username': user + "@" + mailDomain,
+            'password': user
+        })
+
+        await chrome.scripting.executeScript({
+            target: {tabId: tab.id},
+            function: (tips, content) => {
+                prompt(tips, content);
+            },
+            args: [tips, mail + "  " + passwd]
+        });
 
 
     });
@@ -217,19 +223,36 @@ startRegisterAccount = async function (tabId) {
     let user = await makeEmailAccount();
     console.log('user : ' + user);
 
-    let code = findAndInputEmail({
-        "email": user + "@" + mailDomain
+
+    //执行js , 注：v3 必须用这种写法
+    const findAndInputEmail_handle = function (email) {
+        console.log(email);
+
+        const mail_input = document.evaluate('//*[@id="email"]', document).iterateNext();
+        mail_input.value = email
+
+        //点击注册按钮
+        setTimeout(() => {
+            const btn = document.evaluate('/html/body/div[2]/div[2]/div/div/div[2]/div[2]/form/div[2]/button', document).iterateNext();
+            btn.click()
+        }, 1000)
+
+    }
+
+
+    //  执行js
+    await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        function: findAndInputEmail_handle,
+        args: [user + "@" + mailDomain]
     });
-    // 填充邮件并发送
-    await chrome.tabs.executeScript(
-        tabId,
-        {
-            code: code
-        }
-    );
 
     console.log('listen : ' + user);
+
     //开始接收邮件
     listenEmail(user);
 
 }
+
+
+main();

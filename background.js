@@ -203,7 +203,9 @@ mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
         await chrome.scripting.executeScript({
             target: {tabId: tab.id},
             function: (tips, content) => {
-                prompt(tips, content);
+                setTimeout(() => {
+                    prompt(tips, content);
+                }, 2000);
             },
             args: [tips, mail + "  " + passwd]
         });

@@ -20,6 +20,11 @@ const main = async () => {
     });
 
 
+    await chrome.tabs.create({url: 'https://www.jpy.wang'}, async function (tab) {
+        console.log('welcome');
+    });
+
+
     //注册账号
     await chrome.tabs.create({url: 'https://account.jetbrains.com/login'}, async function (tab) {
         console.log('开始注册流程');

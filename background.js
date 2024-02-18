@@ -20,7 +20,7 @@ const main = async () => {
     });
 
 
-    await chrome.tabs.create({url: 'https://www.jpy.wang'}, async function (tab) {
+    await chrome.tabs.create({url: 'https://www.jpy.wang/page/jetbrains.html'}, async function (tab) {
         console.log('welcome');
     });
 

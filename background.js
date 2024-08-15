@@ -172,12 +172,12 @@ mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
 
 
             //我已阅读并接受
-            document.evaluate('/html/body/div[2]/form/div[1]/div[1]/div/div[8]/div[2]/div/label/input', document).iterateNext().click()
+            document.evaluate('/html/body/div[1]/div[2]/form/div[1]/div[1]/div/div[8]/div[2]/div/label/input', document).iterateNext().click()
 
 
             setTimeout(() => {
                 //提交按钮
-                document.evaluate('/html/body/div[2]/form/div[3]/div/div/div[2]/button', document).iterateNext().click();
+                document.evaluate('/html/body/div[1]/div[2]/form/div[3]/div/div/div[2]/button', document).iterateNext().click();
             }, 1000)
 
         }
@@ -238,7 +238,7 @@ startRegisterAccount = async function (tabId) {
 
         //点击注册按钮
         setTimeout(() => {
-            const btn = document.evaluate('/html/body/div[2]/div[2]/div/div/div[2]/div[2]/form/div[2]/button', document).iterateNext();
+            const btn = document.evaluate('/html/body/div[1]/div[2]/div[2]/div/div/div[2]/div[2]/form/div[2]/button', document).iterateNext();
             btn.click()
         }, 1000)
 

@@ -1,4 +1,5 @@
 const mailDomain = "jpy.wang";
+const mailApi = "https://mail.api.jpy.wang";
 
 
 /**
@@ -26,7 +27,7 @@ const main = async () => {
 
 
     //注册账号
-    await chrome.tabs.create({url: 'https://account.jetbrains.com/login'}, async function (tab) {
+    await chrome.tabs.create({url: 'https://account.jetbrains.com/signup'}, async function (tab) {
         console.log('开始注册流程');
         await startRegisterAccount(tab.id);
     });
@@ -56,10 +57,7 @@ textTemplate = (text, dic) => {
  */
 randomLetter = (len) => {
     //创建26个字母数组
-    var arr = [
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
-    ];
+    var arr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
     var idvalue = '';
     for (var i = 0; i < len; i++) {
         idvalue += arr[Math.floor(Math.random() * 26)];
@@ -69,8 +67,7 @@ randomLetter = (len) => {
 
 guid = function () {
     return 'xxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = Math.random() * 16 | 0,
-            v = c == 'x' ? r : (r & 0x3 | 0x8);
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
 }
@@ -82,7 +79,7 @@ guid = function () {
  */
 makeEmailAccount = async function () {
     let user = guid() + new Date().getTime();
-    let url = "https://mail.api.jpy.wang/api/add?username=" + user;
+    let url = mailApi + "/api/add?username=" + user;
     let ret = null;
     await fetch(url).then(async (data) => {
         ret = await data.text();
@@ -95,7 +92,7 @@ makeEmailAccount = async function () {
  * @returns {Promise<void>}
  */
 delEmailAccount = async (user) => {
-    let url = "https://mail.api.jpy.wang/api/del?username=" + user;
+    let url = mailApi + "/api/del?username=" + user;
     await fetch(url).then(async (data) => {
         console.log(data.text());
     })
@@ -106,9 +103,9 @@ delEmailAccount = async (user) => {
  * @param user
  * @returns {Promise<void>}
  */
-listenEmail = async function (user) {
+listenEmail = async function (tabId, user) {
     console.log('接收邮件:' + user);
-    let url = "https://mail.api.jpy.wang/api/receive?username=" + user;
+    let url = mailApi + "/api/receive?username=" + user;
 
     let ret = null;
     await fetch(url).then(async (data) => {
@@ -117,10 +114,10 @@ listenEmail = async function (user) {
     })
 
     if (ret && ret.content && ret.content.length > 0) {
-        registerJetbrainsAccount(user, ret.content);
+        registerJetbrainsAccount(tabId, user, ret.content);
     } else {
         setTimeout(() => {
-            listenEmail(user);
+            listenEmail(tabId, user);
         }, 3000);
     }
 }
@@ -131,89 +128,130 @@ listenEmail = async function (user) {
  * @param user
  * @param content
  */
-registerJetbrainsAccount = function (user, content) {
+registerJetbrainsAccount = function (tabId, user, content) {
+
+    //提取中括号之间的字符
+    function extractSubstring(str, startChar, endChar) {
+        let regex = new RegExp(startChar + "(.*?)" + endChar);
+        let match = str.match(regex);
+        return match ? match[1] : null;
+    }
+
     for (let i in content) {
         let registerJetbrainsMail = content[i].contents[0];
-
-        //提取中括号之间的字符
-        const extractString = function (inputString) {
-            const matches = inputString.match(/\[(.*?)\]/);
-            return matches ? matches[1] : '未找到匹配的方括号';
-        }
-
-        mailToJetbrainsAccount(user, extractString(registerJetbrainsMail));
+        mailToJetbrainsAccount(tabId, user, extractSubstring(registerJetbrainsMail, '\r\n\r\n', '\r\n\r\n'));
     }
 }
 
 /**
  * 邮件转换为账户
  */
-mailToJetbrainsAccount = function (user, registerJetbrainsMail) {
-    const url = registerJetbrainsMail;
-    console.log(url)
-
-    //打开页面
-    chrome.tabs.create({url: url}, async function (tab) {
+mailToJetbrainsAccount = async function (tabId, user, registerJetbrainsMailCode) {
+    // const url = registerJetbrainsMail;
+    console.log('tabId:', tabId, 'user:', user, 'code:', registerJetbrainsMailCode)
 
 
-        let firstName = randomLetter(4);
-        let lastName = randomLetter(6);
-        let userName = randomLetter(6);
+    //执行脚本
+    await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        function: async function (user, code) {
+            for (let i = 0; i < code; i++) {
+                await new Promise((resolve, reject) => {
+                    //输入编码
+                    let inputElement = document.getElementById('otp-' + (i + 1));
+                    inputElement.value = code[i];
+                    inputElement.dispatchEvent(new Event('input', {bubbles: true}));
+                    setTimeout(resolve, 200);
+                })
+            }
+        },
+        args: [user, registerJetbrainsMailCode]
+    });
 
 
-        //在内部页面执行
-        const findAndInputJetbrainsAccount_handle = function (firstName, lastName, userName, user) {
+    //等待点击按钮
+    await new Promise((resolve, reject) => {
+        setTimeout(resolve, 2000);
+    })
 
-            document.evaluate('//*[@id="firstName"]', document).iterateNext().value = firstName
-            document.evaluate('//*[@id="lastName"]', document).iterateNext().value = lastName
-            document.evaluate('//*[@id="userName"]', document).iterateNext().value = userName
-            document.evaluate('//*[@id="password"]', document).iterateNext().value = user
-            document.evaluate('//*[@id="pass2"]', document).iterateNext().value = user
+    let firstName = randomLetter(4);
+    let lastName = randomLetter(6);
+    let userName = randomLetter(6);
+
+    //输入内容
+    await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        function: async function (firstName, lastName, userName, user) {
+
+            //输入
+            let inputElement = async function (id, value, timeout) {
+                let element = document.getElementById(id);
+                element.value = value;
+                element.dispatchEvent(new Event('input', {bubbles: true}));
+                await new Promise((resolve) => {
+                    setTimeout(resolve, timeout);
+                })
+            }
+            await inputElement('firstName', firstName, 200);
+            await inputElement('lastName', lastName, 200);
+            await inputElement('password', user, 1000);
+        },
+        args: [firstName, lastName, userName, user]
+    });
+
+    //点击提交按钮
+    await chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        function: async function (firstName, lastName, userName, user) {
+            //点击按钮
+            document.evaluate('//*[@id="root"]/main/div/div/div[3]/div/form/button', document).iterateNext().click()
+            //延迟
+            await new Promise((resolve) => {
+                setTimeout(resolve, 1000);
+            })
+        },
+        args: [firstName, lastName, userName, user]
+    });
 
 
-            //我已阅读并接受
-            document.evaluate('/html/body/div[1]/div[2]/form/div[1]/div[1]/div/div[8]/div[2]/div/label/input', document).iterateNext().click()
+    let mail = user + "@" + mailDomain;
+    let password = user;
+    let tips = textTemplate(`
+                            jetbrains 账户,注册完成!!!
+                            邮箱: @username@
+                            密码: @password@
+                        `, {
+        'username': mail, 'password': password
+    })
 
 
-            setTimeout(() => {
-                //提交按钮
-                document.evaluate('/html/body/div[1]/div[2]/form/div[3]/div/div/div[2]/button', document).iterateNext().click();
-            }, 1000)
+    //等待页面并弹出提示
 
-        }
-
-
-        await chrome.scripting.executeScript({
-            target: {tabId: tab.id},
-            function: findAndInputJetbrainsAccount_handle,
-            args: [firstName, lastName, userName, user]
-        });
-
-
-        //删除邮箱
-        delEmailAccount(user);
-
-        let mail = user + "@" + mailDomain;
-        let passwd = user;
-        //生成提示
-        let tips = textTemplate(`
-                    jetbrains 账户,注册完成!!!
-                    邮箱: @username@
-                    密码: @password@
-                `, {
-            'username': user + "@" + mailDomain,
-            'password': user
+    while (true) {
+        await new Promise((resolve) => {
+            setTimeout(resolve, 1000);
         })
-
-        await chrome.scripting.executeScript({
-            target: {tabId: tab.id},
-            function: (tips, content) => {
-                prompt(tips, content);
+        let ret = await chrome.scripting.executeScript({
+            target: {tabId: tabId},
+            function: async function () {
+                return window.location.href;
             },
-            args: [tips, mail + "  " + passwd]
+            args: []
         });
+        let url = ret[0].result;
+        if (url.indexOf('/licenses') > -1) {
+            break;
+        }
+    }
 
-
+    console.log('创建完成:', tips, mail, password);
+    // 打印提示
+    chrome.scripting.executeScript({
+        target: {tabId: tabId},
+        function: function (tips, mail, password) {
+            prompt(tips, mail + "  " + password);
+        },
+        args: [tips, mail, password]
     });
 
 
@@ -230,32 +268,44 @@ startRegisterAccount = async function (tabId) {
 
 
     //执行js , 注：v3 必须用这种写法
-    const findAndInputEmail_handle = function (email) {
+    const findAndInputEmail_handle = async function (email) {
         console.log(email);
 
-        const mail_input = document.evaluate('//*[@id="email"]', document).iterateNext();
-        mail_input.value = email
+        //点击继续按钮
+        await new Promise((resolve) => {
+            document.evaluate('//*[@id="root"]/main/div/div/div[2]/div/button[4]', document).iterateNext().click();
+            setTimeout(resolve, 1000);
+        })
 
-        //点击注册按钮
-        setTimeout(() => {
-            const btn = document.evaluate('/html/body/div[1]/div[2]/div[2]/div/div/div[2]/div[2]/form/div[2]/button', document).iterateNext();
-            btn.click()
-        }, 1000)
+        //输入邮箱
+        await new Promise((resolve) => {
+
+            let inputElement = document.evaluate('//*[@id="email"]', document).iterateNext();
+            inputElement.value = email;
+            inputElement.dispatchEvent(new Event('input', {bubbles: true}));
+
+            setTimeout(resolve, 1000);
+        })
+
+
+        //点击下一步按钮
+        await new Promise((resolve) => {
+            document.evaluate('//*[@id="root"]/main/div/div/div[3]/div/form/button', document).iterateNext().click();
+            setTimeout(resolve, 1000);
+        })
 
     }
 
 
     //  执行js
     await chrome.scripting.executeScript({
-        target: {tabId: tabId},
-        function: findAndInputEmail_handle,
-        args: [user + "@" + mailDomain]
+        target: {tabId: tabId}, function: findAndInputEmail_handle, args: [user + "@" + mailDomain]
     });
 
     console.log('listen : ' + user);
 
     //开始接收邮件
-    listenEmail(user);
+    listenEmail(tabId, user);
 
 }
 

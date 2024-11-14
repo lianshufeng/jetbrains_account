@@ -1,8 +1,8 @@
 {
   "update_url": "https://github.com/lianshufeng/jetbrains_account",
   "manifest_version": 3,
-  "version": "1.0.1",
-  "name": "Get Jetbrains Account (2024-1-25)",
+  "version": "1.0.2",
+  "name": "Get Jetbrains Account (2024-11-15)",
   "description": "",
   "icons": {
     "16": "data/icons/16.png",

@@ -7,6 +7,12 @@ const mailApi = "https://mail.api.jpy.wang";
  */
 const main = async () => {
 
+}
+
+
+
+const start_task = async () => {
+
 
     await chrome.browsingData.remove({
         "origins": ["https://jetbrains.com", "http://jetbrains.com"]
@@ -310,4 +316,16 @@ startRegisterAccount = async function (tabId) {
 }
 
 
+// background.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "start_task") {
+        start_task()
+        const result = "开始自动注册";
+        sendResponse({result: result});
+    }
+});
+
+
+
 main();
+

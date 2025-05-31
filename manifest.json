@@ -1,8 +1,8 @@
 {
   "update_url": "https://github.com/lianshufeng/jetbrains_account",
   "manifest_version": 3,
-  "version": "1.0.2",
-  "name": "Get Jetbrains Account (2024-11-15)",
+  "version": "1.0.3",
+  "name": "Get Jetbrains Account (2025-06-01)",
   "description": "",
   "icons": {
     "16": "data/icons/16.png",
@@ -27,10 +27,18 @@
     "webRequest",
     "scripting"
   ],
-  "homepage_url": "http://www.jpy.wang",
+  "homepage_url": "https://www.jpy.wang",
   "host_permissions": [
     "*://*/*"
   ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "data/icons/16.png",
+      "48": "data/icons/48.png",
+      "128": "data/icons/128.png"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },
